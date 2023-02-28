@@ -1,0 +1,62 @@
+service: eventbridge-schedule-self-delete-demo
+
+frameworkVersion: '3'
+
+plugins:
+  - serverless-iam-roles-per-function
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+
+functions:
+  schedule:
+    handler: functions/schedule.handler
+    environment:
+      EXECUTE_ARN: !GetAtt ExecuteLambdaFunction.Arn
+      ROLE_ARN: !GetAtt EventBridgeRole.Arn
+    events:
+      - http:
+          path: /
+          method: post
+    iamRoleStatements:
+      - Effect: Allow
+        Action: iam:PassRole
+        Resource: !GetAtt EventBridgeRole.Arn
+      - Effect: Allow
+        Action: scheduler:CreateSchedule
+        Resource: '*'
+
+  execute:
+    handler: functions/execute.handler
+    destinations:
+      onSuccess: delete
+
+  delete:
+    handler: functions/delete.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action: scheduler:DeleteSchedule
+        Resource: '*'
+
+resources:
+  Resources:
+    EventBridgeRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service: scheduler.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: Allow
+                  Action: lambda:InvokeFunction
+                  Resource: !GetAtt ExecuteLambdaFunction.Arn
+            PolicyName: root
+          
