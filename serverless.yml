@@ -57,6 +57,6 @@ resources:
               Statement:
                 - Effect: Allow
                   Action: lambda:InvokeFunction
-                  Resource: !GetAtt ExecuteLambdaFunction.Arn
+                  Resource: "*"
             PolicyName: root
           
